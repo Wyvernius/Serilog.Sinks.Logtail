@@ -6,12 +6,16 @@ on:
 jobs:
   build:
     - uses: actions/checkout@v2
-    - uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '5.x.x' # SDK Version to use.
-    - run: dotnet build <my project>
-    - name: Create the package
-      run: dotnet pack --configuration Release Serilog.Sinks.Logtail
+    - name: Setup .NET
+    uses: actions/setup-dotnet@v1
+    with:
+      dotnet-version: 5.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore
+      - name: Create the package
+        run: dotnet pack --configuration Release Serilog.Sinks.Logtail
   publish:
     - uses: actions/setup-dotnet@v1
       with:

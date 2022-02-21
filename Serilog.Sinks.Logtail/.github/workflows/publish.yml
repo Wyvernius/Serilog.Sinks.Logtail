@@ -1,0 +1,22 @@
+name: publish to nuget
+on:
+  push:
+    branches:
+      - main # Default release branch
+jobs:
+  build:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '5.x.x' # SDK Version to use.
+    - run: dotnet build <my project>
+    - name: Create the package
+      run: dotnet pack --configuration Release Serilog.Sinks.Logtail
+  publish:
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.x.x
+    - name: Publish the package to nuget.org
+      run: dotnet nuget push */bin/Release/*.nupkg -k $NUGET_AUTH_TOKEN -s https://api.nuget.org/v3/index.json
+      env:
+        NUGET_AUTH_TOKEN: ${{ secrets.NUGET_TOKEN }}

@@ -4,15 +4,15 @@ using Serilog.Configuration;
 using Serilog.Core;
 using Serilog.Events;
 using System.Net.Http;
-using System.Net.Mime;
 using Newtonsoft.Json;
 using System.Text;
 using System.Collections.Generic;
-using Serilog.Formatting.Json;
+using Serilog.Sinks.PeriodicBatching;
+using System.Threading.Tasks;
 
 namespace Serilog.Sinks.Logtail
 {
-    public class LogtailSink : ILogEventSink, IDisposable
+    public class LogtailSink : IBatchedLogEventSink, IDisposable
     {
         readonly IFormatProvider? _formatProvider;
         readonly HttpClient _client;
@@ -55,21 +55,58 @@ namespace Serilog.Sinks.Logtail
 			var content = new StringContent(json, Encoding.UTF8, "application/json");
             _client.PostAsync("https://in.logtail.com/", content);
 		}
-    }
+
+
+        public Task EmitBatchAsync(IEnumerable<LogEvent> batch)
+        {
+            List<Dictionary<string, string>> logs = new List<Dictionary<string, string>>();
+
+            foreach (var logEvent in batch)
+            {
+                Dictionary<string, string> contextDictionary = new Dictionary<string, string>
+                {
+                    { "message", logEvent.RenderMessage() },
+                    { "Level", logEvent.Level.ToString() },
+                    { "Exception", logEvent.Exception == null ? null : logEvent.Exception.StackTrace }
+                };
+                foreach (var key in logEvent.Properties)
+                {
+                    contextDictionary.Add(key.Key, key.Value.ToString());
+                }
+                logs.Add(contextDictionary);
+            }
+
+			var json = JsonConvert.SerializeObject(logs);
+			var content = new StringContent(json, Encoding.UTF8, "application/json");
+			return _client.PostAsync("https://in.logtail.com/", content);
+		}
+
+		public Task OnEmptyBatchAsync()
+		{
+			return Task.CompletedTask;
+		}
+	}
 
     public static class LogtailSeqSinkExtensions
     {
-        public static LoggerConfiguration LogtailSink(
+        public static LoggerConfiguration Logtail(
             this LoggerSinkConfiguration loggerConfiguration,
             string sourceToken,
             IFormatProvider? formatProvider = null,
-            string endpoint = "https://in.logtail.com",
-            int retries = 10,
             int flushPeriodMilliseconds = 250,
             int maxBatchSize = 1000)
         {
-            return loggerConfiguration.Sink(new LogtailSink(formatProvider, sourceToken)
-                { Endpoint = endpoint, Retries = retries, FlushPeriodMilliseconds = flushPeriodMilliseconds, MaxBatchSize = maxBatchSize });
+            var sink = new LogtailSink(formatProvider, sourceToken);
+
+            var batchingOptions = new PeriodicBatchingSinkOptions
+            {
+                BatchSizeLimit = maxBatchSize,
+                //Period = TimeSpan.FromMilliseconds(flushPeriodMilliseconds)
+            };
+
+            var batchSink = new PeriodicBatchingSink(sink, batchingOptions);
+
+            return loggerConfiguration.Sink(batchSink);
         }
     }
 }

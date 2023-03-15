@@ -9,6 +9,7 @@ using System.Text;
 using System.Collections.Generic;
 using Serilog.Sinks.PeriodicBatching;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Serilog.Sinks.Logtail
 {
@@ -67,7 +68,8 @@ namespace Serilog.Sinks.Logtail
                 {
                     { "message", logEvent.RenderMessage() },
                     { "Level", logEvent.Level.ToString() },
-                    { "Exception", logEvent.Exception == null ? null : logEvent.Exception.StackTrace }
+                    { "Exception", logEvent.Exception == null ? null : logEvent.Exception.StackTrace },
+                    { "Platform", RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "Linux" : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "OSX" : RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Unknown" }
                 };
                 foreach (var key in logEvent.Properties)
                 {

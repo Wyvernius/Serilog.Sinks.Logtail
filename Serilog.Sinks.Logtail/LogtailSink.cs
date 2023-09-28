@@ -27,7 +27,7 @@ namespace Serilog.Sinks.Logtail
             _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {sourceToken}");
         }
 
-        public string Endpoint { get; set; } = "https://in.logtail.com";
+        public string Endpoint { get; set; } = "https://in.logs.betterstack.com/";
 
         public int Retries { get; set; }
 
@@ -57,7 +57,7 @@ namespace Serilog.Sinks.Logtail
             }
 			var json = JsonConvert.SerializeObject(contextDictionary);
 			var content = new StringContent(json, Encoding.UTF8, "application/json");
-            _client.PostAsync("https://in.logtail.com/", content);
+            _client.PostAsync(Endpoint, content);
 		}
 
 

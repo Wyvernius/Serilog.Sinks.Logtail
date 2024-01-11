@@ -13,7 +13,7 @@ using System.Runtime.InteropServices;
 
 namespace Serilog.Sinks.Logtail
 {
-    public class LogtailSink : ILogEventSink, IDisposable
+    public class LogtailSink : IBatchedLogEventSink, IDisposable
     {
         readonly IFormatProvider? _formatProvider;
         readonly HttpClient _client;
@@ -69,6 +69,7 @@ namespace Serilog.Sinks.Logtail
             {
                 Dictionary<string, string> contextDictionary = new Dictionary<string, string>
                 {
+                    { "dt", DateTime.UtcNow.ToString("o") },
                     { "message", logEvent.RenderMessage() },
                     { "Level", logEvent.Level.ToString() },
                     { "Exception", logEvent.Exception == null ? null : logEvent.Exception.StackTrace },
@@ -106,12 +107,12 @@ namespace Serilog.Sinks.Logtail
             var batchingOptions = new PeriodicBatchingSinkOptions
             {
                 BatchSizeLimit = maxBatchSize,
-                //Period = TimeSpan.FromMilliseconds(flushPeriodMilliseconds)
+                Period = TimeSpan.FromMilliseconds(flushPeriodMilliseconds)
             };
 
-           // var batchSink = new PeriodicBatchingSink(sink, batchingOptions);
+            var batchSink = new PeriodicBatchingSink(sink, batchingOptions);
 
-            return loggerConfiguration.Sink(sink);
+            return loggerConfiguration.Sink(batchSink);
         }
     }
 }
